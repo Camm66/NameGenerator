@@ -8,10 +8,10 @@ class NameGenerator:
         # Markov models
         self.boyModel = {}
         self.girlModel = {}
+        # Default chain length
+        self.order = 2
         # Import name reference files
         self.importNames()
-        # Initialize Markov models
-        self.generateModel()
 
     '''
     This method imports the reference texts containing each individual name.
@@ -45,47 +45,35 @@ class NameGenerator:
         self.girlModel = self.parseNames(self.girlNames)
         self.girlModel = self.calculateDistribution(self.girlModel)
 
-        # for item in self.boyModel:
-        #     print("{} {}".format(item, self.boyModel[item]))
+        #for item in self.boyModel:
+        #    print("{} {}".format(item, self.boyModel[item]))
         #
-        # for item in self.girlModel:
-        #     print("{} {}".format(item, self.girlModel[item]))
+        #for item in self.girlModel:
+        #    print("{} {}".format(item, self.girlModel[item]))
 
     '''
     This function tracks the occurrence of letter sequences on each name
     in the specified inputList. The letter associations are considered 
-    in lengths of 1 and 2 in formats such as: 'rs' -> 't', 'r' -> 'st', etc.
+    in sub-sequence lengths == to the self.order argument provided by the user.
     The __ is used to identify starting sequences, whereas the '\n' character
-    identifies ending sequences
+    identifies ending sequences.
     '''
     def parseNames(self, inputList):
         states = {}
-        j = 2
+        # J is the length of the chain being considered
+        j = self.order
         for item in inputList:
-            s = "__" + item
-            # Single to single letter association: 'rs' followed by 't'
+            # Append _ characters for starting sequences
+            s = "_" * j + item
             for i in range(0, len(item)):
                 prefix = s[i:i + j]
                 suffix = s[i + j]
                 states = self.addState(states, prefix, suffix)
 
-            # Single to double letter association: 'r' followed by 'st'
-            for i in range(0, len(item) - 1):
-                prefix = s[i]
-                suffix = s[i + 1: i + 1 + j]
-                states = self.addState(states, prefix, suffix)
-
-            # Single to single letter association: 'r' followed by 's'
-            for i in range(0, len(item)):
-                prefix = s[i]
-                suffix = s[i + 1]
-                states = self.addState(states, prefix, suffix)
-
             # Append new line character for finishing sequence
-            for i in range(1, 3):
-                prefix = s[len(item): len(item) + i]
-                suffix = "\n"
-                states = self.addState(states, prefix, suffix)
+            prefix = s[len(item): len(item) + j]
+            suffix = "\n"
+            states = self.addState(states, prefix, suffix)
         return states
 
     '''
@@ -106,8 +94,8 @@ class NameGenerator:
         return states
     '''
     Here we complete the creation of our markov model by converting the counts
-    previously recorded for sequence into probabilities. With this implementation,
-    our model is currently a 1st order model.
+    previously recorded for each sequence into probabilities. 
+    For example: {'ma' : {'a' : 2, 'b' : 2 }} == {'ma' : {'a' : .50, 'b' : .50 }}
     '''
     def calculateDistribution(self, inputModel):
         for element in inputModel:
@@ -124,7 +112,11 @@ class NameGenerator:
     word using our models. The returned word is checked against the min and max length
     requirements, as well as for uniqueness. 
     '''
-    def generateNames(self, gender, number, minLen, maxLen):
+    def generateNames(self, gender, number, minLen, maxLen, order):
+        self.order = order
+        # Initialize Markov models
+        self.generateModel()
+
         names = []
         i = 0
         while i < number:
@@ -140,7 +132,7 @@ class NameGenerator:
     This is the method that performs the actual name generation. The selected prefix is 
     fed into the numpy.random.choice() method, which selects the appropriate suffix based
     on its probability distribution. The returned suffix is appended to the name under 
-    construction. The '__' and '\n' provide the boundary conditions for name building.
+    construction. The '_' and '\n' provide the boundary conditions for name building.
     '''
     def newName(self, gender):
         # Select the gender model
@@ -154,7 +146,7 @@ class NameGenerator:
             nameList = self.girlNames
 
         # Construct the word
-        prefix = "__"
+        prefix = "_" * self.order
         name = ""
         while True:
             suffix = choice(model[prefix].keys(), 1, p=model[prefix].values())
