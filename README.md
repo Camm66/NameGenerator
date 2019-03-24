@@ -11,5 +11,5 @@ First, navigate to the root directory containing the following files:
 Then, run the following command:
 
 ```
-python markov.py
+python generate.py
 ```
